@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>🎵 Beat Garden</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: 'Fredoka', ui-rounded, 'SF Pro Rounded', system-ui, 'Trebuchet MS', sans-serif;
+    background: radial-gradient(120% 120% at 20% 0%, #2a1a4a 0%, #150f2e 55%, #0c0a1a 100%);
+    color: #fff; min-height: 100vh; display: flex; justify-content: center;
+    align-items: flex-start; padding: 24px 14px;
+  }
+  .app { width: 100%; max-width: 720px; }
+  .head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+  .title { font-size: 28px; font-weight: 700; }
+  .sub { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+  .toggle { display: flex; background: rgba(255,255,255,0.08); border-radius: 999px; padding: 4px; }
+  .btn { font-family: inherit; border: none; cursor: pointer; font-weight: 600; transition: transform .1s, filter .15s; }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: scale(0.95); }
+  .seg { padding: 7px 16px; border-radius: 999px; font-size: 14px; background: transparent; color: #fff; }
+  .seg.on { background: #fff; color: #150f2e; }
+  .help-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); color: #fff; font-size: 18px; }
+  .transport { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .big { padding: 12px 26px; border-radius: 14px; font-size: 18px; font-weight: 700; }
+  .pill { padding: 11px 18px; border-radius: 14px; font-size: 15px; }
+  .speed { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .speed input { accent-color: #3fd0ff; width: 120px; }
+  .selectors { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
+  .sel-label { font-size: 12px; opacity: 0.6; margin-bottom: 6px; }
+  .sel-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { padding: 7px 12px; border-radius: 10px; font-size: 13px; background: rgba(255,255,255,0.1); color: #fff; }
+  .chip.on { background: #fff; color: #150f2e; }
+  .grid { overflow-x: auto; padding-bottom: 6px; }
+  .grid::-webkit-scrollbar { height: 8px; }
+  .grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+  .row { display: flex; gap: 4px; margin-bottom: 4px; align-items: center; }
+  .cell { width: 30px; height: 30px; border-radius: 9px; border: 2px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.05); cursor: pointer; transition: transform .08s, background .12s;
+          transform: scale(0.94); flex: 0 0 auto; }
+  .cell.active { border-color: #fff; }
+  .gap { margin-left: 8px; }
+  .dlabel { width: 64px; font-size: 12px; opacity: 0.8; flex: 0 0 auto; }
+  .drum-wrap { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .hint { font-size: 12px; opacity: 0.55; margin-top: 16px; text-align: center; }
+  .hidden { display: none !important; }
+  .overlay { position: fixed; inset: 0; background: rgba(8,6,20,0.72); backdrop-filter: blur(6px);
+             display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
+  .modal { position: relative; width: 100%; max-width: 380px;
+           background: linear-gradient(160deg,#241846,#170f30); border: 1px solid rgba(255,255,255,0.12);
+           border-radius: 22px; padding: 26px 22px 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+           text-align: center; animation: pop .25s ease; }
+  @keyframes pop { 0%{transform:scale(0.85);opacity:0} 100%{transform:scale(1);opacity:1} }
+  .modal-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%;
+                 border: none; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 14px; }
+  .modal-emoji { font-size: 48px; line-height: 1; margin-bottom: 10px; }
+  .modal-title { font-size: 21px; font-weight: 700; margin-bottom: 10px; }
+  .modal-body { font-size: 14.5px; line-height: 1.55; opacity: 0.88; min-height: 110px; text-align: left; }
+  .modal-body b { color: #ffd23f; }
+  .modal-body ul { margin: 0; padding-left: 20px; }
+  .modal-body li { margin-bottom: 8px; }
+  .dots { display: flex; gap: 6px; justify-content: center; margin: 16px 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: all .2s; }
+  .dot.on { background: #ffd23f; width: 20px; border-radius: 4px; }
+  .modal-nav { display: flex; gap: 10px; }
+  .modal-btn { flex: 1; padding: 12px; border-radius: 13px; font-size: 15px; background: #5ddf7a; color: #150f2e; box-shadow: 0 4px 0 #3aa856; }
+  .modal-btn-ghost { padding: 12px 16px; border-radius: 13px; font-size: 15px; background: rgba(255,255,255,0.12); color: #fff; }
+  .lib-save { display: flex; gap: 8px; margin-bottom: 14px; }
+  #songName { flex: 1; padding: 11px 12px; border-radius: 11px; border: 2px solid rgba(255,255,255,0.15);
+              background: rgba(255,255,255,0.06); color: #fff; font-family: inherit; font-size: 14px; }
+  #songName::placeholder { color: rgba(255,255,255,0.4); }
+  .lib-count { font-size: 12px; opacity: 0.55; text-align: left; margin-bottom: 8px; }
+  .lib-list { text-align: left; max-height: 230px; overflow-y: auto; }
+  .lib-empty { font-size: 13px; opacity: 0.6; text-align: center; padding: 18px 6px; line-height: 1.5; }
+  .song-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px;
+              border-radius: 11px; background: rgba(255,255,255,0.06); margin-bottom: 7px; }
+  .song-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .song-load { padding: 6px 12px; border-radius: 9px; background: #5ddf7a; color: #150f2e; font-size: 13px; }
+  .song-del { padding: 6px 9px; border-radius: 9px; background: rgba(255,93,143,0.25); color: #fff; font-size: 13px; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div>
+      <div class="title">🎵 Beat Garden</div>
+      <div class="sub">Tap the squares, then hit play. Every note sounds good!</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn help-btn" id="helpBtn" title="How to play">❓</button>
+      <div class="toggle">
+        <button class="btn seg on" id="modeSimple">🎹 Simple</button>
+        <button class="btn seg" id="modeStudio">🎛️ Studio</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="btn big" id="play" style="background:#5ddf7a;color:#150f2e;box-shadow:0 5px 0 #3aa856">▶ Play</button>
+    <button class="btn pill" id="surprise" style="background:#ffd23f;color:#150f2e;box-shadow:0 5px 0 #c9a212">🎲 Surprise!</button>
+    <button class="btn pill" id="clear" style="background:rgba(255,255,255,0.12);color:#fff">🧽 Clear</button>
+    <button class="btn pill" id="songsBtn" style="background:#6c7bff;color:#fff">💾 My Songs</button>
+    <div class="speed hidden" id="speedWrap">
+      <span style="font-size:13px;opacity:.7">Speed</span>
+      <input type="range" min="60" max="180" value="110" id="bpm" />
+      <span style="font-size:13px;width:52px;opacity:.85" id="bpmLabel">110 bpm</span>
+    </div>
+  </div>
+
+  <div class="selectors hidden" id="selectors">
+    <div>
+      <div class="sel-label">Mood</div>
+      <div class="sel-row" id="moodRow"></div>
+    </div>
+    <div>
+      <div class="sel-label">Sound</div>
+      <div class="sel-row" id="instRow"></div>
+    </div>
+  </div>
+
+  <div class="grid" id="melGrid"></div>
+  <div class="drum-wrap grid hidden" id="drumGrid"></div>
+
+  <div class="hint" id="hint">Want drums, new sounds, and moods? Tap <b>🎛️ Studio</b> up top.</div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-emoji" id="mEmoji"></div>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-body" id="mBody"></div>
+    <div class="dots" id="mDots"></div>
+    <div class="modal-nav">
+      <button class="btn modal-btn-ghost hidden" id="mBack">Back</button>
+      <button class="btn modal-btn" id="mNext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="libOverlay">
+  <div class="modal">
+    <button class="modal-close" id="libClose">✕</button>
+    <div class="modal-emoji">💾</div>
+    <div class="modal-title">My Songs</div>
+    <div class="lib-save">
+      <input id="songName" maxlength="20" placeholder="Name your song" />
+      <button class="btn modal-btn" id="saveSongBtn" style="flex:0 0 auto">Save</button>
+    </div>
+    <div class="lib-count" id="libCount"></div>
+    <div class="lib-list" id="libList"></div>
+  </div>
+</div>
+
+<script>
+const STEPS = 16;
+const MOODS = {
+  happy:   { label: "Happy ☀️",   notes: ["D5","C5","A4","G4","E4","D4","C4"] },
+  chill:   { label: "Chill 🌙",   notes: ["C5","A4","G4","E4","D4","C4","A3"] },
+  mystery: { label: "Mystery 🔮", notes: ["F5","D5","C5","A4","G4","F4","D4"] },
+  sparkle: { label: "Sparkle ✨", notes: ["A4","G4","E4","D4","B3","A3","G3"] },
+};
+const INSTRUMENTS = {
+  soft:"Soft 🎹", bells:"Bells 🔔", pluck:"Pluck ✨", arcade:"Arcade 🎮",
+  bass:"Bass 🔊", marimba:"Marimba 🪵", kalimba:"Kalimba 🛎️",
+  guitar:"Guitar 🎸", banjo:"Banjo 🪕", fiddle:"Fiddle 🎻",
+  harmonica:"Harmonica 🎶", steel:"Pedal Steel 🎚️"
+};
+const ROW_COLORS = ["#ff5d8f","#ff8a3d","#ffd23f","#5ddf7a","#3fd0ff","#6c7bff","#c66cff"];
+const DRUM_LABELS = ["Boom 🥁","Clap 👏","Tick ✨","Bombo 🪘"];
+const DRUM_COLORS = ["#ff7849","#48d9c0","#a78bfa","#e0a458"];
+
+// ---------- state ----------
+let mode="simple", isPlaying=false, moodKey="happy", instrument="soft", bpm=110;
+const blank = (rows)=>Array.from({length:rows},()=>Array(STEPS).fill(false));
+function normalizeDrums(g){
+  const out = g.map(r=>{ const row=r.slice(0,STEPS); while(row.length<STEPS) row.push(false); return row; });
+  while(out.length<4) out.push(Array(STEPS).fill(false));
+  return out.slice(0,4);
+}
+let melody=blank(7), drums=blank(4);
+[[5,0],[4,2],[3,4],[2,6],[3,8],[4,10],[5,12],[4,14]].forEach(([r,c])=>melody[r][c]=true);
+[0,8].forEach(c=>drums[0][c]=true);
+[4,12].forEach(c=>drums[1][c]=true);
+[0,2,4,6,8,10,12,14].forEach(c=>drums[2][c]=true);
+[6,14].forEach(c=>drums[3][c]=true);
+
+// ---------- audio (native Web Audio API, no libraries) ----------
+let ac=null, master=null, melBus=null, reverb=null, noiseBuf=null;
+function noteToFreq(name){
+  const m={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+  let i=1, semi=m[name[0]];
+  if(name[i]==="#"){ semi++; i++; } else if(name[i]==="b"){ semi--; i++; }
+  const oct=parseInt(name.slice(i),10);
+  const midi=(oct+1)*12+semi;
+  return 440*Math.pow(2,(midi-69)/12);
+}
+function buildBus(){
+  master=ac.createGain(); master.gain.value=0.75; master.connect(ac.destination);
+  reverb=ac.createConvolver();
+  const len=ac.sampleRate*1.6, imp=ac.createBuffer(2,len,ac.sampleRate);
+  for(let ch=0;ch<2;ch++){ const d=imp.getChannelData(ch);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.5); }
+  reverb.buffer=imp;
+  const revGain=ac.createGain(); revGain.gain.value=0.18; reverb.connect(revGain).connect(master);
+  melBus=ac.createGain(); melBus.gain.value=1; melBus.connect(master); melBus.connect(reverb);
+  noiseBuf=ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate);
+  const nd=noiseBuf.getChannelData(0);
+  for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
+}
+
+// voice helpers
+function envGain(time,attack,dur,peak){
+  const g=ac.createGain(); g.connect(melBus);
+  g.gain.setValueAtTime(0.0001,time);
+  g.gain.exponentialRampToValueAtTime(peak,time+attack);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+dur);
+  return g;
+}
+function susGain(time,attack,dur,peak,rel){
+  const g=ac.createGain(); g.connect(melBus);
+  g.gain.setValueAtTime(0.0001,time);
+  g.gain.linearRampToValueAtTime(peak,time+attack);
+  g.gain.setValueAtTime(peak,Math.max(time+attack,time+dur-rel));
+  g.gain.exponentialRampToValueAtTime(0.0001,time+dur);
+  return g;
+}
+function vibrato(osc,time,dur,rate,cents){
+  const lfo=ac.createOscillator(), lg=ac.createGain();
+  lfo.frequency.value=rate; lg.gain.value=cents;
+  lfo.connect(lg); lg.connect(osc.detune);
+  lfo.start(time); lfo.stop(time+dur+0.05);
+}
+function mkOsc(type,freq,det){ const o=ac.createOscillator(); o.type=type; o.frequency.value=freq; if(det) o.detune.value=det; return o; }
+function lp(cut,q){ const f=ac.createBiquadFilter(); f.type="lowpass"; f.frequency.value=cut; if(q) f.Q.value=q; return f; }
+
+function playMel(freq,time){
+  switch(instrument){
+    case "bells": {
+      const o=mkOsc("sine",freq), g=envGain(time,0.005,1.1,0.22); o.connect(g);
+      o.start(time); o.stop(time+1.2);
+      const o2=mkOsc("sine",freq*3.01), g2=envGain(time,0.005,0.7,0.08); o2.connect(g2);
+      o2.start(time); o2.stop(time+0.8); break;
+    }
+    case "pluck": {
+      const o=mkOsc("triangle",freq), f=lp(2800), g=envGain(time,0.005,0.35,0.3);
+      o.connect(f); f.connect(g); o.start(time); o.stop(time+0.4); break;
+    }
+    case "arcade": {
+      const o=mkOsc("square",freq), g=envGain(time,0.005,0.25,0.12); o.connect(g);
+      o.start(time); o.stop(time+0.3); break;
+    }
+    case "bass": {  // deep round bass, an octave below
+      const sub=mkOsc("sine",freq*0.5), g1=envGain(time,0.005,0.5,0.24); sub.connect(g1);
+      const saw=mkOsc("sawtooth",freq*0.5), f=lp(700,2), g2=envGain(time,0.005,0.45,0.11);
+      saw.connect(f); f.connect(g2);
+      sub.start(time); sub.stop(time+0.55); saw.start(time); saw.stop(time+0.5); break;
+    }
+    case "marimba": {  // warm wooden mallet
+      const o=mkOsc("sine",freq), g=envGain(time,0.003,0.5,0.3); o.connect(g);
+      o.start(time); o.stop(time+0.55);
+      const o2=mkOsc("sine",freq*4.0), g2=envGain(time,0.003,0.16,0.07); o2.connect(g2);
+      o2.start(time); o2.stop(time+0.2); break;
+    }
+    case "kalimba": {  // metallic thumb piano — brighter & more bell-like than marimba
+      const o=mkOsc("sine",freq), g=envGain(time,0.004,0.6,0.26); o.connect(g);
+      o.start(time); o.stop(time+0.65);
+      const o2=mkOsc("sine",freq*2.76), g2=envGain(time,0.004,0.3,0.09); o2.connect(g2);
+      o2.start(time); o2.stop(time+0.35);
+      const o3=mkOsc("triangle",freq*0.5), g3=envGain(time,0.004,0.18,0.05); o3.connect(g3);
+      o3.start(time); o3.stop(time+0.22); break;
+    }
+    case "guitar": {  // warm acoustic pluck — two slightly detuned strings
+      [["triangle",-4],["sawtooth",4]].forEach(([ty,d])=>{
+        const o=mkOsc(ty,freq,d), f=lp(2600,1), g=envGain(time,0.005,0.7,0.13);
+        o.connect(f); f.connect(g); o.start(time); o.stop(time+0.75); }); break;
+    }
+    case "banjo": {  // bright, twangy, fast decay
+      [["sawtooth",-6],["square",6]].forEach(([ty,d])=>{
+        const o=mkOsc(ty,freq,d), f=lp(3600,3), g=envGain(time,0.003,0.3,0.12);
+        o.connect(f); f.connect(g); o.start(time); o.stop(time+0.35); }); break;
+    }
+    case "fiddle": {  // bowed, sustained, with vibrato
+      const o=mkOsc("sawtooth",freq), f=lp(2400), g=susGain(time,0.07,1.0,0.2,0.15);
+      o.connect(f); f.connect(g); vibrato(o,time,1.0,5.5,18);
+      o.start(time); o.stop(time+1.05); break;
+    }
+    case "harmonica": {  // reedy stack of detuned squares
+      [-8,0,8].forEach(d=>{
+        const o=mkOsc("square",freq,d), f=lp(2000), g=susGain(time,0.04,0.9,0.055,0.12);
+        o.connect(f); f.connect(g); vibrato(o,time,0.9,5,10);
+        o.start(time); o.stop(time+0.95); }); break;
+    }
+    case "steel": {  // pedal steel — slides up into the note, long sustain
+      const o=ac.createOscillator(); o.type="triangle";
+      o.frequency.setValueAtTime(freq*Math.pow(2,-3/12),time);
+      o.frequency.exponentialRampToValueAtTime(freq,time+0.14);
+      const f=lp(2200), g=susGain(time,0.08,1.2,0.22,0.25);
+      o.connect(f); f.connect(g); vibrato(o,time,1.2,5.5,12);
+      o.start(time); o.stop(time+1.25); break;
+    }
+    default: {  // soft
+      const o=mkOsc("triangle",freq), g=envGain(time,0.01,0.9,0.25); o.connect(g);
+      o.start(time); o.stop(time+0.95);
+    }
+  }
+}
+function playKick(time){
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type="sine"; o.connect(g); g.connect(master);
+  o.frequency.setValueAtTime(150,time);
+  o.frequency.exponentialRampToValueAtTime(50,time+0.1);
+  g.gain.setValueAtTime(0.9,time);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+0.32);
+  o.start(time); o.stop(time+0.34);
+}
+function playSnare(time){
+  const src=ac.createBufferSource(); src.buffer=noiseBuf;
+  const hp=ac.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=1200;
+  const g=ac.createGain(); src.connect(hp); hp.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.5,time);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+0.2);
+  src.start(time); src.stop(time+0.2);
+}
+function playHat(time){
+  const src=ac.createBufferSource(); src.buffer=noiseBuf;
+  const hp=ac.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=7000;
+  const g=ac.createGain(); src.connect(hp); hp.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.3,time);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+0.05);
+  src.start(time); src.stop(time+0.06);
+}
+function playBombo(time){  // deep, woody Argentine bass drum — lower & longer than the kick
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type="sine"; o.connect(g); g.connect(master);
+  o.frequency.setValueAtTime(120,time);
+  o.frequency.exponentialRampToValueAtTime(45,time+0.18);
+  g.gain.setValueAtTime(0.95,time);
+  g.gain.exponentialRampToValueAtTime(0.0001,time+0.5);
+  o.start(time); o.stop(time+0.52);
+  const src=ac.createBufferSource(); src.buffer=noiseBuf;
+  const bp=ac.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=400; bp.Q.value=1.5;
+  const ng=ac.createGain(); src.connect(bp); bp.connect(ng); ng.connect(master);
+  ng.gain.setValueAtTime(0.25,time);
+  ng.gain.exponentialRampToValueAtTime(0.0001,time+0.08);
+  src.start(time); src.stop(time+0.1);
+}
+
+// ---------- scheduler ----------
+let current16=0, nextNoteTime=0, schedTimer=null;
+const visualQ=[];
+const sec16=()=>(60/bpm)/4;
+function scheduleStep(s,time){
+  const notes=MOODS[moodKey].notes;
+  for(let r=0;r<7;r++) if(melody[r][s]) playMel(noteToFreq(notes[r]),time);
+  if(drums[0][s]) playKick(time);
+  if(drums[1][s]) playSnare(time);
+  if(drums[2][s]) playHat(time);
+  if(drums[3] && drums[3][s]) playBombo(time);
+  visualQ.push({step:s,time});
+}
+function scheduler(){
+  while(nextNoteTime < ac.currentTime + 0.12){
+    scheduleStep(current16,nextNoteTime);
+    nextNoteTime += sec16();
+    current16=(current16+1)%STEPS;
+  }
+  schedTimer=setTimeout(scheduler,25);
+}
+function draw(){
+  if(!isPlaying) return;
+  const now=ac.currentTime; let s=-1;
+  while(visualQ.length && visualQ[0].time<now){ s=visualQ[0].step; visualQ.shift(); }
+  if(s>-1) setActiveColumn(s);
+  requestAnimationFrame(draw);
+}
+
+// ---------- grids ----------
+const melGrid=document.getElementById("melGrid");
+const drumGrid=document.getElementById("drumGrid");
+const melCells=[], drumCells=[];
+function styleCell(b,on,color){
+  if(on){ b.style.background=color; b.style.boxShadow="0 0 14px "+color+", inset 0 -3px 0 rgba(0,0,0,0.25)"; b.style.transform="scale(1)"; }
+  else { b.style.background="rgba(255,255,255,0.05)"; b.style.boxShadow="none"; b.style.transform="scale(0.94)"; }
+}
+function buildMelody(){
+  melGrid.innerHTML=""; melCells.length=0;
+  for(let r=0;r<7;r++){ const row=document.createElement("div"); row.className="row"; const cells=[];
+    for(let c=0;c<STEPS;c++){ const b=document.createElement("button"); b.className="cell"; if(c%4===0&&c!==0) b.classList.add("gap");
+      styleCell(b,melody[r][c],ROW_COLORS[r]);
+      b.onclick=(function(rr,cc,bb){ return function(){ melody[rr][cc]=!melody[rr][cc]; styleCell(bb,melody[rr][cc],ROW_COLORS[rr]); }; })(r,c,b);
+      row.appendChild(b); cells.push(b); }
+    melGrid.appendChild(row); melCells.push(cells); }
+}
+function buildDrums(){
+  drumGrid.innerHTML=""; drumCells.length=0;
+  for(let r=0;r<drums.length;r++){ const row=document.createElement("div"); row.className="row";
+    const lab=document.createElement("span"); lab.className="dlabel"; lab.textContent=DRUM_LABELS[r]; row.appendChild(lab);
+    const cells=[];
+    for(let c=0;c<STEPS;c++){ const b=document.createElement("button"); b.className="cell"; if(c%4===0&&c!==0) b.classList.add("gap");
+      styleCell(b,drums[r][c],DRUM_COLORS[r]);
+      b.onclick=(function(rr,cc,bb){ return function(){ drums[rr][cc]=!drums[rr][cc]; styleCell(bb,drums[rr][cc],DRUM_COLORS[rr]); }; })(r,c,b);
+      row.appendChild(b); cells.push(b); }
+    drumGrid.appendChild(row); drumCells.push(cells); }
+}
+function setActiveColumn(s){
+  for(let r=0;r<melCells.length;r++) for(let c=0;c<STEPS;c++) melCells[r][c].classList.toggle("active",c===s);
+  for(let r=0;r<drumCells.length;r++) for(let c=0;c<STEPS;c++) drumCells[r][c].classList.toggle("active",c===s);
+}
+
+// ---------- selectors ----------
+function buildChips(container,options,current,onPick){
+  container.innerHTML="";
+  Object.keys(options).forEach(function(k){
+    const b=document.createElement("button"); b.className="btn chip"+(k===current?" on":"");
+    b.textContent=options[k]; b.onclick=function(){ onPick(k); }; container.appendChild(b);
+  });
+}
+function renderSelectors(){
+  const moodOpts={}; Object.keys(MOODS).forEach(function(k){ moodOpts[k]=MOODS[k].label; });
+  buildChips(document.getElementById("moodRow"), moodOpts, moodKey, function(k){ moodKey=k; renderSelectors(); });
+  buildChips(document.getElementById("instRow"), INSTRUMENTS, instrument, function(k){ instrument=k; renderSelectors(); });
+}
+
+// ---------- controls ----------
+const playBtn=document.getElementById("play");
+playBtn.onclick=async function(){
+  if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }
+  if(ac.state==="suspended") await ac.resume();
+  if(isPlaying){
+    isPlaying=false; clearTimeout(schedTimer); visualQ.length=0; setActiveColumn(-1);
+    playBtn.textContent="▶ Play"; playBtn.style.background="#5ddf7a"; playBtn.style.boxShadow="0 5px 0 #3aa856";
+  } else {
+    current16=0; nextNoteTime=ac.currentTime+0.05; isPlaying=true; scheduler(); requestAnimationFrame(draw);
+    playBtn.textContent="⏸ Stop"; playBtn.style.background="#ff5d8f"; playBtn.style.boxShadow="0 5px 0 #c43a68";
+  }
+};
+document.getElementById("surprise").onclick=function(){
+  melody=blank(7);
+  for(let c=0;c<STEPS;c++) if(Math.random()<0.45) melody[Math.floor(Math.random()*7)][c]=true;
+  buildMelody();
+};
+document.getElementById("clear").onclick=function(){
+  melody=blank(7); buildMelody();
+  if(mode==="studio"){ drums=blank(4); buildDrums(); }
+};
+document.getElementById("bpm").oninput=function(e){ bpm=Number(e.target.value); document.getElementById("bpmLabel").textContent=bpm+" bpm"; };
+function setMode(m){
+  mode=m;
+  document.getElementById("modeSimple").classList.toggle("on",m==="simple");
+  document.getElementById("modeStudio").classList.toggle("on",m==="studio");
+  const studio=m==="studio";
+  document.getElementById("selectors").classList.toggle("hidden",!studio);
+  document.getElementById("drumGrid").classList.toggle("hidden",!studio);
+  document.getElementById("speedWrap").classList.toggle("hidden",!studio);
+  document.getElementById("hint").classList.toggle("hidden",studio);
+}
+document.getElementById("modeSimple").onclick=function(){ setMode("simple"); };
+document.getElementById("modeStudio").onclick=function(){ setMode("studio"); };
+
+// ---------- how-to walkthrough ----------
+const SLIDES = [
+  { emoji:"🌱", title:"Welcome to Beat Garden!",
+    body:"This is your own little music maker. In about a minute you'll have a real song playing. Let's go!" },
+  { emoji:"🎨", title:"Tap the colorful squares",
+    body:"Each square is a note. Tap some to turn them ON. Squares up high are <b>high notes</b>, down low are <b>low notes</b>.<br><br>Secret: every note here sounds good together, so you literally <b>can't mess up</b>!" },
+  { emoji:"▶️", title:"Press Play",
+    body:"Hit the green <b>▶ Play</b> button to hear your song loop around and around. A white box dances across so you can see where you are.<br><br>Tap it again to stop." },
+  { emoji:"🎲", title:"Stuck? Roll the dice",
+    body:"Tap <b>🎲 Surprise!</b> for a random melody, then keep the bits you like and change the rest.<br><br><b>🧽 Clear</b> wipes everything so you can start fresh." },
+  { emoji:"🎛️", title:"Open the Studio",
+    body:"Tap <b>🎛️ Studio</b> at the top for the cool stuff: <b>drums</b> (including a booming <b>Bombo</b>!), <b>moods</b>, a <b>speed</b> slider, and <b>12 instruments</b> — banjo, fiddle, pedal steel, a deep <b>bass</b>, a woody <b>marimba</b>, and a twinkly <b>kalimba</b> for country and folk songs!" },
+  { emoji:"💾", title:"Save your songs",
+    body:"Made something you love? Tap <b>💾 My Songs</b>, give it a name, and hit <b>Save</b>.<br><br>You can keep up to <b>8 songs</b> and open them again later. They stay right here in the app — no files to worry about!" },
+  { emoji:"🎯", title:"Fun missions", isList:true,
+    body:"<ul>"
+      + "<li>Build a <b>drum beat</b> first, then add a melody on top.</li>"
+      + "<li>Make a happy song, then switch the Mood to <b>Mystery</b> — hear it change?</li>"
+      + "<li>Put <b>Banjo</b> on a fast speed for a hoedown. 🤠</li>"
+      + "<li>Try <b>Pedal Steel</b> + the <b>Chill</b> mood for a slow country tune.</li>"
+      + "<li>Folk jam: <b>Bombo</b> + <b>Marimba</b> together!</li>"
+      + "<li>Make a song that sounds like <b>your day</b>!</li>"
+      + "</ul>" },
+];
+let slideIdx = 0;
+const overlay = document.getElementById("overlay");
+const mEmoji = document.getElementById("mEmoji");
+const mTitle = document.getElementById("mTitle");
+const mBody  = document.getElementById("mBody");
+const mDots  = document.getElementById("mDots");
+const mBack  = document.getElementById("mBack");
+const mNext  = document.getElementById("mNext");
+function renderSlide(){
+  const s = SLIDES[slideIdx];
+  mEmoji.textContent = s.emoji;
+  mTitle.textContent = s.title;
+  mBody.innerHTML = s.body;
+  mDots.innerHTML = SLIDES.map(function(_,i){ return '<span class="dot'+(i===slideIdx?' on':'')+'"></span>'; }).join("");
+  mBack.classList.toggle("hidden", slideIdx===0);
+  mNext.textContent = slideIdx===SLIDES.length-1 ? "Let's play! 🎵" : "Next →";
+}
+function openHelp(){ slideIdx=0; renderSlide(); overlay.classList.remove("hidden"); }
+function closeHelp(){ overlay.classList.add("hidden"); }
+mNext.onclick = function(){ if(slideIdx<SLIDES.length-1){ slideIdx++; renderSlide(); } else closeHelp(); };
+mBack.onclick = function(){ if(slideIdx>0){ slideIdx--; renderSlide(); } };
+document.getElementById("modalClose").onclick = closeHelp;
+document.getElementById("helpBtn").onclick = openHelp;
+overlay.onclick = function(e){ if(e.target===overlay) closeHelp(); };
+
+// ---------- my songs (saved in the browser, on this device) ----------
+const SONG_KEY = "beatgarden_songs_v1", MAX_SONGS = 8;
+const FUN_NAMES = ["My Cool Song","Banjo Party","Space Beat","Happy Tune","Mystery Mix","Dance Time","Sunny Day","Robot Jam"];
+const libOverlay = document.getElementById("libOverlay");
+function escapeHtml(s){ return s.replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+function loadSongs(){ try { return JSON.parse(localStorage.getItem(SONG_KEY)) || []; } catch(e){ return []; } }
+function storeSongs(a){ try { localStorage.setItem(SONG_KEY, JSON.stringify(a)); } catch(e){} }
+function openLib(){
+  document.getElementById("songName").value = FUN_NAMES[Math.floor(Math.random()*FUN_NAMES.length)];
+  renderLib(); libOverlay.classList.remove("hidden");
+}
+function closeLib(){ libOverlay.classList.add("hidden"); }
+function renderLib(){
+  const songs = loadSongs();
+  document.getElementById("libCount").textContent = "Your songs: " + songs.length + " / " + MAX_SONGS;
+  const list = document.getElementById("libList");
+  if(songs.length === 0){
+    list.innerHTML = '<div class="lib-empty">No saved songs yet.<br>Make something, give it a name, and tap Save!</div>';
+    return;
+  }
+  list.innerHTML = songs.map(function(s,i){
+    return '<div class="song-row"><span class="song-name">🎵 '+escapeHtml(s.name)+'</span>'
+      + '<span style="flex:0 0 auto"><button class="btn song-load" data-i="'+i+'">Open</button>'
+      + '<button class="btn song-del" data-i="'+i+'">🗑</button></span></div>';
+  }).join("");
+  Array.prototype.forEach.call(list.querySelectorAll(".song-load"), function(b){ b.onclick=function(){ loadSong(+b.dataset.i); }; });
+  Array.prototype.forEach.call(list.querySelectorAll(".song-del"), function(b){ b.onclick=function(){
+    const a=loadSongs(); a.splice(+b.dataset.i,1); storeSongs(a); renderLib();
+  }; });
+}
+function saveCurrent(){
+  const songs = loadSongs();
+  if(songs.length >= MAX_SONGS){
+    alert("Your song box is full ("+MAX_SONGS+" songs). Tap the 🗑 next to a song to make room!");
+    return;
+  }
+  const name = (document.getElementById("songName").value.trim() || ("Song " + (songs.length+1))).slice(0,20);
+  songs.push({
+    name: name,
+    melody: JSON.parse(JSON.stringify(melody)),
+    drums:  JSON.parse(JSON.stringify(drums)),
+    mood: moodKey, instrument: instrument, bpm: bpm
+  });
+  storeSongs(songs); renderLib();
+  const btn = document.getElementById("saveSongBtn");
+  btn.textContent = "✓ Saved!";
+  setTimeout(function(){ btn.textContent = "Save"; }, 1200);
+}
+function loadSong(i){
+  const s = loadSongs()[i]; if(!s) return;
+  melody = JSON.parse(JSON.stringify(s.melody));
+  drums  = normalizeDrums(JSON.parse(JSON.stringify(s.drums)));
+  moodKey = s.mood || "happy"; instrument = s.instrument || "soft"; bpm = s.bpm || 110;
+  document.getElementById("bpm").value = bpm;
+  document.getElementById("bpmLabel").textContent = bpm + " bpm";
+  buildMelody(); buildDrums(); renderSelectors();
+  closeLib();
+}
+document.getElementById("songsBtn").onclick = openLib;
+document.getElementById("libClose").onclick = closeLib;
+document.getElementById("saveSongBtn").onclick = saveCurrent;
+libOverlay.onclick = function(e){ if(e.target===libOverlay) closeLib(); };
+
+// ---------- init ----------
+buildMelody(); buildDrums(); renderSelectors(); setMode("simple"); renderSlide();
+</script>
+</body>
+</html>

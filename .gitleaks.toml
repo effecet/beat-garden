@@ -1,0 +1,10 @@
+# gitleaks config for beat-garden
+# The only "match" is a localStorage key NAME ("beatgarden_songs_v1"), not a secret.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "localStorage key names — not secrets"
+regexes = [
+  '''beatgarden_songs_v1''',
+]
