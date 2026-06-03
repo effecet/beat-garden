@@ -103,6 +103,7 @@
     <button class="btn pill" id="surprise" style="background:#ffd23f;color:#150f2e;box-shadow:0 5px 0 #c9a212">🎲 Surprise!</button>
     <button class="btn pill" id="clear" style="background:rgba(255,255,255,0.12);color:#fff">🧽 Clear</button>
     <button class="btn pill" id="songsBtn" style="background:#6c7bff;color:#fff">💾 My Songs</button>
+    <button class="btn pill" id="downloadBtn" style="background:#3fd0ff;color:#150f2e;box-shadow:0 5px 0 #2a9fc6">📥 Download</button>
     <div class="speed hidden" id="speedWrap">
       <span style="font-size:13px;opacity:.7">Speed</span>
       <input type="range" min="60" max="180" value="110" id="bpm" />
@@ -118,6 +119,10 @@
     <div>
       <div class="sel-label">Sound</div>
       <div class="sel-row" id="instRow"></div>
+    </div>
+    <div>
+      <div class="sel-label">Download length</div>
+      <div class="sel-row" id="lenRow"></div>
     </div>
   </div>
 
@@ -169,12 +174,14 @@ const INSTRUMENTS = {
   guitar:"Guitar 🎸", banjo:"Banjo 🪕", fiddle:"Fiddle 🎻",
   harmonica:"Harmonica 🎶", steel:"Pedal Steel 🎚️"
 };
+// loops to render when downloading audio (one loop = the 16-step pattern, ~one bar)
+const LENGTH_LABELS = { "2":"Short 🤏", "4":"Medium 👍", "8":"Long 🎉" };
 const ROW_COLORS = ["#ff5d8f","#ff8a3d","#ffd23f","#5ddf7a","#3fd0ff","#6c7bff","#c66cff"];
 const DRUM_LABELS = ["Boom 🥁","Clap 👏","Tick ✨","Bombo 🪘"];
 const DRUM_COLORS = ["#ff7849","#48d9c0","#a78bfa","#e0a458"];
 
 // ---------- state ----------
-let mode="simple", isPlaying=false, moodKey="happy", instrument="soft", bpm=110;
+let mode="simple", isPlaying=false, moodKey="happy", instrument="soft", bpm=110, songLength=4;
 const blank = (rows)=>Array.from({length:rows},()=>Array(STEPS).fill(false));
 function normalizeDrums(g){
   const out = g.map(r=>{ const row=r.slice(0,STEPS); while(row.length<STEPS) row.push(false); return row; });
@@ -353,14 +360,14 @@ function playBombo(time){  // deep, woody Argentine bass drum — lower & longer
 let current16=0, nextNoteTime=0, schedTimer=null;
 const visualQ=[];
 const sec16=()=>(60/bpm)/4;
-function scheduleStep(s,time){
+function scheduleStep(s,time,pushVisual){
   const notes=MOODS[moodKey].notes;
   for(let r=0;r<7;r++) if(melody[r][s]) playMel(noteToFreq(notes[r]),time);
   if(drums[0][s]) playKick(time);
   if(drums[1][s]) playSnare(time);
   if(drums[2][s]) playHat(time);
   if(drums[3] && drums[3][s]) playBombo(time);
-  visualQ.push({step:s,time});
+  if(pushVisual!==false) visualQ.push({step:s,time});
 }
 function scheduler(){
   while(nextNoteTime < ac.currentTime + 0.12){
@@ -423,16 +430,20 @@ function renderSelectors(){
   const moodOpts={}; Object.keys(MOODS).forEach(function(k){ moodOpts[k]=MOODS[k].label; });
   buildChips(document.getElementById("moodRow"), moodOpts, moodKey, function(k){ moodKey=k; renderSelectors(); });
   buildChips(document.getElementById("instRow"), INSTRUMENTS, instrument, function(k){ instrument=k; renderSelectors(); });
+  buildChips(document.getElementById("lenRow"), LENGTH_LABELS, String(songLength), function(k){ songLength=Number(k); renderSelectors(); });
 }
 
 // ---------- controls ----------
 const playBtn=document.getElementById("play");
+function stopPlayback(){
+  isPlaying=false; clearTimeout(schedTimer); visualQ.length=0; setActiveColumn(-1);
+  playBtn.textContent="▶ Play"; playBtn.style.background="#5ddf7a"; playBtn.style.boxShadow="0 5px 0 #3aa856";
+}
 playBtn.onclick=async function(){
   if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }
   if(ac.state==="suspended") await ac.resume();
   if(isPlaying){
-    isPlaying=false; clearTimeout(schedTimer); visualQ.length=0; setActiveColumn(-1);
-    playBtn.textContent="▶ Play"; playBtn.style.background="#5ddf7a"; playBtn.style.boxShadow="0 5px 0 #3aa856";
+    stopPlayback();
   } else {
     current16=0; nextNoteTime=ac.currentTime+0.05; isPlaying=true; scheduler(); requestAnimationFrame(draw);
     playBtn.textContent="⏸ Stop"; playBtn.style.background="#ff5d8f"; playBtn.style.boxShadow="0 5px 0 #c43a68";
@@ -474,7 +485,7 @@ const SLIDES = [
   { emoji:"🎛️", title:"Open the Studio",
     body:"Tap <b>🎛️ Studio</b> at the top for the cool stuff: <b>drums</b> (including a booming <b>Bombo</b>!), <b>moods</b>, a <b>speed</b> slider, and <b>12 instruments</b> — banjo, fiddle, pedal steel, a deep <b>bass</b>, a woody <b>marimba</b>, and a twinkly <b>kalimba</b> for country and folk songs!" },
   { emoji:"💾", title:"Save your songs",
-    body:"Made something you love? Tap <b>💾 My Songs</b>, give it a name, and hit <b>Save</b>.<br><br>You can keep up to <b>8 songs</b> and open them again later. They stay right here in the app — no files to worry about!" },
+    body:"Made something you love? Tap <b>💾 My Songs</b>, give it a name, and hit <b>Save</b>.<br><br>You can keep up to <b>8 songs</b> and open them again later. They stay right here in the app — no files to worry about!<br><br>Want to keep it forever? Tap <b>📥 Download</b> to save your song as an audio file on your computer. 🎧" },
   { emoji:"🎯", title:"Fun missions", isList:true,
     body:"<ul>"
       + "<li>Build a <b>drum beat</b> first, then add a melody on top.</li>"
@@ -572,6 +583,66 @@ document.getElementById("songsBtn").onclick = openLib;
 document.getElementById("libClose").onclick = closeLib;
 document.getElementById("saveSongBtn").onclick = saveCurrent;
 libOverlay.onclick = function(e){ if(e.target===libOverlay) closeLib(); };
+
+// ---------- export audio (offline render → WAV, no libraries) ----------
+// Reuses the exact same voices as live playback by pointing the engine globals
+// at an OfflineAudioContext, rendering faster-than-realtime, then restoring them.
+async function renderToBuffer(loops, tail){
+  loops = loops || 4; tail = (tail==null ? 2.5 : tail);  // tail captures the reverb + long-note decay
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const rate = 44100, step = (60/bpm)/4;
+  const total = loops*STEPS*step + tail;
+  const offline = new OAC(2, Math.max(1, Math.ceil(rate*total)), rate);
+  const saved = { ac:ac, master:master, melBus:melBus, reverb:reverb, noiseBuf:noiseBuf };
+  ac = offline; buildBus();
+  for(let loop=0; loop<loops; loop++)
+    for(let s=0; s<STEPS; s++)
+      scheduleStep(s, (loop*STEPS + s)*step, false);
+  try { return await offline.startRendering(); }
+  finally { ac=saved.ac; master=saved.master; melBus=saved.melBus; reverb=saved.reverb; noiseBuf=saved.noiseBuf; }
+}
+function bufferToWav(buffer){
+  const numCh=buffer.numberOfChannels, len=buffer.length, rate=buffer.sampleRate;
+  const blockAlign=numCh*2, dataLen=len*blockAlign;
+  const out=new ArrayBuffer(44+dataLen), view=new DataView(out);
+  let p=0;
+  const str=(s)=>{ for(let i=0;i<s.length;i++) view.setUint8(p++, s.charCodeAt(i)); };
+  const u32=(v)=>{ view.setUint32(p,v,true); p+=4; };
+  const u16=(v)=>{ view.setUint16(p,v,true); p+=2; };
+  str("RIFF"); u32(36+dataLen); str("WAVE");
+  str("fmt "); u32(16); u16(1); u16(numCh); u32(rate); u32(rate*blockAlign); u16(blockAlign); u16(16);
+  str("data"); u32(dataLen);
+  const chans=[]; for(let c=0;c<numCh;c++) chans.push(buffer.getChannelData(c));
+  for(let i=0;i<len;i++)
+    for(let c=0;c<numCh;c++){
+      const v=Math.max(-1,Math.min(1,chans[c][i]));
+      view.setInt16(p, v<0 ? v*0x8000 : v*0x7FFF, true); p+=2;
+    }
+  return new Blob([out], {type:"audio/wav"});
+}
+function songFileName(){
+  const raw=(document.getElementById("songName").value||"").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"-").slice(0,40);
+  return (raw||"beat-garden")+".wav";
+}
+const downloadBtn=document.getElementById("downloadBtn");
+downloadBtn.onclick=async function(){
+  if(isPlaying) stopPlayback();
+  if(!ac){ ac=new (window.AudioContext||window.webkitAudioContext)(); buildBus(); }
+  const orig=downloadBtn.textContent;
+  downloadBtn.textContent="⏳ Rendering…"; downloadBtn.disabled=true;
+  try {
+    const blob=bufferToWav(await renderToBuffer(songLength));
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=songFileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    downloadBtn.textContent="✓ Saved!";
+  } catch(e){
+    downloadBtn.textContent="⚠ Try again";
+  }
+  setTimeout(function(){ downloadBtn.textContent=orig; downloadBtn.disabled=false; }, 1400);
+};
 
 // ---------- init ----------
 buildMelody(); buildDrums(); renderSelectors(); setMode("simple"); renderSlide();
