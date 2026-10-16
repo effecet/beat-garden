@@ -1,0 +1,17 @@
+# Dependabot version updates. Security alerts are configured separately
+# (repo Settings -> Code security); this file schedules version bumps.
+# beat-garden is a single static page with no package manifest, so only
+# GitHub Actions refs are tracked.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "[ci]"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
